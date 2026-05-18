@@ -1,0 +1,58 @@
+# Rules for detecting whether appraisal economy was manually calculated
+# NDA-safe: no client data, VIN, employee names, deal identifiers or raw exports.
+
+- id: intake_economy_001
+  block: intake
+  category: economy_calculation
+  signal: Экономика оценки не выглядит рассчитанной вручную
+  condition: owner_price % 1000 != 0 or margin_rub % 1000 != 0 or sale_price % 1000 != 0
+  fields:
+    - Собственнику
+    - Маржа, ₽
+    - Цена продажи
+  severity: high
+  interpretation: Если хотя бы одно из трех ключевых денежных полей не кратно 1 000 ₽, это сильный признак того, что человек не занимался ручной настройкой экономики, а оставил автоматический расчет.
+  owner_message: Проверьте оценку: ключевые денежные параметры выглядят не как управленческое решение, а как автоматический расчет.
+  correct_example:
+    owner_price: 500000
+    margin_rub: 100000
+    sale_price: 600000
+  incorrect_example:
+    owner_price: 583271
+    margin_rub: 117842
+    sale_price: 701113
+
+- id: intake_economy_002
+  block: intake
+  category: economy_calculation
+  signal: Все три ключевых денежных поля округлены
+  condition: owner_price % 1000 == 0 and margin_rub % 1000 == 0 and sale_price % 1000 == 0
+  fields:
+    - Собственнику
+    - Маржа, ₽
+    - Цена продажи
+  severity: info
+  interpretation: Округленные значения являются признаком того, что экономика могла быть осознанно настроена человеком.
+  owner_message: Экономика выглядит как ручной управленческий расчет, но для итоговой оценки качества нужно дополнительно проверить рынок, срок продажи, GM2, мобильный осмотр и согласование.
+
+- id: intake_economy_003
+  block: intake
+  category: economy_calculation
+  signal: Экономика не заполнена
+  condition: owner_price is empty or margin_rub is empty or sale_price is empty
+  fields:
+    - Собственнику
+    - Маржа, ₽
+    - Цена продажи
+  severity: high
+  interpretation: Невозможно проверить, была ли экономика рассчитана. Для автомобиля на складе это критичный управленческий пробел.
+  owner_message: Проверьте, почему в оценке отсутствуют ключевые поля экономики.
+
+- id: intake_economy_004
+  block: intake
+  category: economy_calculation
+  signal: Неокругленная экономика усиливается другими отклонениями
+  condition: economy_not_rounded == true and (on_stock == true or mobile_inspection_completed == false or appraisal_status != "Завершена" or gm2_percent < target_gm2_percent or price_approval is empty)
+  severity: critical
+  interpretation: Неокругленная экономика сама по себе уже является сильным признаком отсутствия ручного расчета. В сочетании с незавершенным осмотром, незавершенной оценкой, слабой GM2 или отсутствием согласования риск становится критичным.
+  owner_message: Сделка требует приоритетной управленческой проверки: экономика выглядит автоматической и есть дополнительные отклонения процесса.
