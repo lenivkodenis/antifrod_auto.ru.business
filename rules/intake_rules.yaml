@@ -1,0 +1,67 @@
+# Initial rules for vehicle intake control
+# Do not treat these rules as final legal or HR conclusions.
+# They are management signals for review.
+
+- id: intake_001
+  block: intake
+  signal: Автомобиль на складе, но оценка не завершена
+  condition: on_stock == true and appraisal_status != "Завершена"
+  severity: high
+  interpretation: Машина вошла в бизнес до формального закрытия оценки.
+  owner_message: Проверьте, почему автомобиль попал на склад до завершения оценки.
+
+- id: intake_002
+  block: intake
+  signal: Автомобиль на складе без завершенного мобильного осмотра
+  condition: on_stock == true and mobile_inspection_status != "Завершен"
+  severity: high
+  interpretation: В Авто.ру Бизнес нет завершенного цифрового следа осмотра.
+  owner_message: Проверьте, был ли автомобиль реально осмотрен до приемки и почему осмотр не завершен в системе.
+
+- id: intake_003
+  block: intake
+  signal: Экономика оценки выглядит шаблонной
+  condition: margin_percent in [0, 10, 20] and preparation_cost_is_typical == true
+  severity: medium
+  interpretation: Не видно признаков индивидуальной настройки экономики под конкретный автомобиль.
+  owner_message: Проверьте, менял ли оценщик параметры маржи, подготовки, срока продажи и прогнозной цены.
+
+- id: intake_004
+  block: intake
+  signal: Не задан управленческий ценовой коридор
+  condition: min_recommended_price is empty and max_recommended_price is empty
+  severity: medium
+  interpretation: Руководителю сложно контролировать минимально допустимую цену и запас сделки.
+  owner_message: Настройте обязательное заполнение ценового коридора для рискованных или дорогих автомобилей.
+
+- id: intake_005
+  block: intake
+  signal: Прогноз срока продажи не задан
+  condition: sale_speed_forecast is empty
+  severity: medium
+  interpretation: Не видно осознанного прогноза скорости реализации автомобиля.
+  owner_message: Проверьте, выбран ли срок продажи и соответствует ли он ликвидности автомобиля.
+
+- id: intake_006
+  block: intake
+  signal: Маржа ниже целевого порога
+  condition: margin_percent < target_margin_percent
+  severity: medium
+  interpretation: Сделка входит с низким запасом экономики.
+  owner_message: Проверьте, почему автомобиль принят с маржой ниже целевого уровня.
+
+- id: intake_007
+  block: intake
+  signal: GM2 ниже целевого порога
+  condition: gm2_percent exists and gm2_percent < target_gm2_percent
+  severity: high
+  interpretation: Реальная экономика сделки не выдерживает расходы второго уровня.
+  owner_message: Проверьте GM2 до принятия решения по входу автомобиля.
+
+- id: intake_008
+  block: intake
+  signal: Повторный VIN
+  condition: vin_count > 1
+  severity: low
+  interpretation: По одному автомобилю есть несколько оценок. Их нужно связывать в историю, а не считать как независимые сделки.
+  owner_message: Проверьте историю оценок по VIN перед выводом о нарушениях.
